@@ -22,7 +22,7 @@ const StoreSettings = () => {
   const [loading, setLoading] = useState(false)
   const [fetchLoading, setFetchLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('general')
-  const theme = useTheme()  // Get theme object
+  const theme = useTheme()
 
   const {
     register,
@@ -37,15 +37,8 @@ const StoreSettings = () => {
 
   const fetchStoreSettings = async () => {
     try {
-      // Try to fetch from API, fallback to defaults if 404
-      const response = await api.get('/settings/store').catch(err => {
-        if (err.response?.status === 404) {
-          // Return default settings if endpoint not found
-          return { data: getDefaultSettings() }
-        }
-        throw err
-      })
-      reset(response.data)
+      const response = await api.get('/settings/store')
+      reset(response.data.data)
     } catch (error) {
       console.warn('Using default store settings')
       reset(getDefaultSettings())
@@ -85,10 +78,25 @@ const StoreSettings = () => {
   const onSubmit = async (data) => {
     setLoading(true)
     try {
-      await api.put('/settings/store', data)
+      // Format data for API
+      const formattedData = {
+        ...data,
+        taxRate: parseFloat(data.taxRate) || 0,
+        deliveryFee: parseFloat(data.deliveryFee) || 0,
+        freeDeliveryMin: parseFloat(data.freeDeliveryMin) || 0,
+        loyaltyPointsRate: parseInt(data.loyaltyPointsRate) || 1,
+        invoiceStartNumber: parseInt(data.invoiceStartNumber) || 1001,
+        autoPrintInvoice: Boolean(data.autoPrintInvoice),
+        emailInvoice: Boolean(data.emailInvoice),
+        autoBackup: Boolean(data.autoBackup),
+      }
+
+      await api.put('/settings/store', formattedData)
       toast.success('Store settings updated successfully')
     } catch (error) {
-      if (error.response?.status === 404) {
+      if (error.response?.status === 400) {
+        toast.error('Validation error: ' + (error.response.data?.error || 'Invalid data'))
+      } else if (error.response?.status === 404) {
         toast.success('Settings saved locally (demo mode)')
       } else {
         toast.error(error.response?.data?.error || 'Failed to update settings')
@@ -104,7 +112,7 @@ const StoreSettings = () => {
         responseType: 'blob'
       }).catch(err => {
         if (err.response?.status === 404) {
-          // Create mock backup if endpoint not found
+          // Create mock backup
           const mockData = JSON.stringify({
             timestamp: new Date().toISOString(),
             settings: getDefaultSettings(),
@@ -115,11 +123,10 @@ const StoreSettings = () => {
         throw err
       })
       
-      // Download backup file
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', `frugano-backup-${new Date().toISOString().split('T')[0]}.zip`)
+      link.setAttribute('download', `frugano-backup-${new Date().toISOString().split('T')[0]}.json`)
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -140,16 +147,16 @@ const StoreSettings = () => {
     >
       {/* Header */}
       <div>
-        <h1 className={`text-2xl font-heading font-bold ${theme?.text?.primary || 'text-gray-900'}`}>
+        <h1 className={`text-2xl font-heading font-bold ${theme.text.primary}`}>
           Store Settings
         </h1>
-        <p className={`${theme?.text?.secondary || 'text-gray-600'} mt-1`}>
+        <p className={`${theme.text.secondary} mt-1`}>
           Configure your store information and preferences
         </p>
       </div>
 
       {/* Tabs */}
-      <div className={`border-b ${theme?.border?.primary || 'border-gray-200'}`}>
+      <div className={`border-b ${theme.border.primary}`}>
         <nav className="flex space-x-8 overflow-x-auto">
           {['general', 'business', 'invoice', 'backup'].map((tab) => (
             <button
@@ -158,7 +165,7 @@ const StoreSettings = () => {
               className={`pb-4 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : `border-transparent ${theme?.text?.secondary || 'text-gray-600'} hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300`
+                  : `border-transparent ${theme.text.secondary} hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300`
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -174,59 +181,50 @@ const StoreSettings = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`${theme?.bg?.card || 'bg-white'} rounded-xl shadow-card p-6 space-y-6`}
+            className={`${theme.bg.card} rounded-xl shadow-card p-6 space-y-6`}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
-                  Store Name
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
+                  Store Name <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <BuildingStorefrontIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    {...register('storeName', { required: 'Store name is required' })}
-                    className={`pl-10 input-field ${errors.storeName ? 'border-red-500' : ''}`}
-                    placeholder="Frugano Store"
-                  />
-                </div>
+                <input
+                  type="text"
+                  {...register('storeName', { required: 'Store name is required' })}
+                  className={`input-field ${errors.storeName ? 'border-red-500' : ''}`}
+                  placeholder="Frugano Store"
+                />
                 {errors.storeName && (
                   <p className="mt-1 text-sm text-red-600">{errors.storeName.message}</p>
                 )}
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Phone Number
                 </label>
-                <div className="relative">
-                  <PhoneIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="tel"
-                    {...register('phone')}
-                    className="pl-10 input-field"
-                    placeholder="+91 9876543210"
-                  />
-                </div>
+                <input
+                  type="tel"
+                  {...register('phone')}
+                  className="input-field"
+                  placeholder="+91 9876543210"
+                />
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Email Address
                 </label>
-                <div className="relative">
-                  <EnvelopeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="email"
-                    {...register('email')}
-                    className="pl-10 input-field"
-                    placeholder="store@frugano.com"
-                  />
-                </div>
+                <input
+                  type="email"
+                  {...register('email')}
+                  className="input-field"
+                  placeholder="store@frugano.com"
+                />
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   GST Number
                 </label>
                 <input
@@ -238,22 +236,19 @@ const StoreSettings = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Address
                 </label>
-                <div className="relative">
-                  <MapPinIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <textarea
-                    {...register('address')}
-                    rows="3"
-                    className="pl-10 input-field"
-                    placeholder="Store address..."
-                  />
-                </div>
+                <textarea
+                  {...register('address')}
+                  rows="3"
+                  className="input-field"
+                  placeholder="Store address..."
+                />
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   City
                 </label>
                 <input
@@ -265,7 +260,7 @@ const StoreSettings = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   State
                 </label>
                 <input
@@ -277,7 +272,7 @@ const StoreSettings = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Pincode
                 </label>
                 <input
@@ -289,7 +284,7 @@ const StoreSettings = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Country
                 </label>
                 <input
@@ -308,45 +303,39 @@ const StoreSettings = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`${theme?.bg?.card || 'bg-white'} rounded-xl shadow-card p-6 space-y-6`}
+            className={`${theme.bg.card} rounded-xl shadow-card p-6 space-y-6`}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Currency
                 </label>
-                <div className="relative">
-                  <CurrencyDollarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <select
-                    {...register('currency')}
-                    className="pl-10 input-field"
-                  >
-                    <option value="INR">Indian Rupee (₹)</option>
-                    <option value="USD">US Dollar ($)</option>
-                    <option value="EUR">Euro (€)</option>
-                  </select>
-                </div>
+                <select
+                  {...register('currency')}
+                  className="input-field"
+                >
+                  <option value="INR">Indian Rupee (₹)</option>
+                  <option value="USD">US Dollar ($)</option>
+                  <option value="EUR">Euro (€)</option>
+                </select>
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Timezone
                 </label>
-                <div className="relative">
-                  <ClockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <select
-                    {...register('timezone')}
-                    className="pl-10 input-field"
-                  >
-                    <option value="Asia/Kolkata">India (IST)</option>
-                    <option value="Asia/Dubai">UAE (GST)</option>
-                    <option value="Asia/Singapore">Singapore (SGT)</option>
-                  </select>
-                </div>
+                <select
+                  {...register('timezone')}
+                  className="input-field"
+                >
+                  <option value="Asia/Kolkata">India (IST)</option>
+                  <option value="Asia/Dubai">UAE (GST)</option>
+                  <option value="Asia/Singapore">Singapore (SGT)</option>
+                </select>
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Tax Rate (%)
                 </label>
                 <input
@@ -359,7 +348,7 @@ const StoreSettings = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Delivery Fee (₹)
                 </label>
                 <input
@@ -372,8 +361,8 @@ const StoreSettings = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
-                  Minimum Order for Free Delivery (₹)
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
+                  Free Delivery Min (₹)
                 </label>
                 <input
                   type="number"
@@ -384,7 +373,7 @@ const StoreSettings = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Loyalty Points per ₹100
                 </label>
                 <input
@@ -396,12 +385,12 @@ const StoreSettings = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Business Hours
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs ${theme?.text?.secondary || 'text-gray-500'} mb-1`}>Opening Time</label>
+                    <label className={`block text-xs ${theme.text.secondary} mb-1`}>Opening Time</label>
                     <input
                       type="time"
                       {...register('openingTime')}
@@ -409,7 +398,7 @@ const StoreSettings = () => {
                     />
                   </div>
                   <div>
-                    <label className={`block text-xs ${theme?.text?.secondary || 'text-gray-500'} mb-1`}>Closing Time</label>
+                    <label className={`block text-xs ${theme.text.secondary} mb-1`}>Closing Time</label>
                     <input
                       type="time"
                       {...register('closingTime')}
@@ -427,26 +416,23 @@ const StoreSettings = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`${theme?.bg?.card || 'bg-white'} rounded-xl shadow-card p-6 space-y-6`}
+            className={`${theme.bg.card} rounded-xl shadow-card p-6 space-y-6`}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Invoice Prefix
                 </label>
-                <div className="relative">
-                  <DocumentTextIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    {...register('invoicePrefix')}
-                    className="pl-10 input-field"
-                    placeholder="INV-"
-                  />
-                </div>
+                <input
+                  type="text"
+                  {...register('invoicePrefix')}
+                  className="input-field"
+                  placeholder="INV-"
+                />
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Invoice Starting Number
                 </label>
                 <input
@@ -458,7 +444,7 @@ const StoreSettings = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                   Footer Text
                 </label>
                 <input
@@ -469,76 +455,49 @@ const StoreSettings = () => {
                 />
               </div>
 
-              <div>
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
-                  Terms & Conditions
-                </label>
-                <textarea
-                  {...register('termsConditions')}
-                  rows="3"
-                  className="input-field"
-                  placeholder="Terms and conditions..."
-                />
-              </div>
-
               <div className="md:col-span-2">
-                <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
-                  Default Printer
-                </label>
-                <div className="relative">
-                  <PrinterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <select
-                    {...register('defaultPrinter')}
-                    className="pl-10 input-field"
-                  >
-                    <option value="">Select Printer</option>
-                    <option value="thermal">Thermal Printer</option>
-                    <option value="a4">A4 Printer</option>
-                  </select>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    {...register('autoPrintInvoice')}
+                    id="autoPrintInvoice"
+                    className="h-4 w-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                  />
+                  <label htmlFor="autoPrintInvoice" className={`text-sm ${theme.text.primary}`}>
+                    Automatically print invoice after sale
+                  </label>
                 </div>
               </div>
 
               <div className="md:col-span-2">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    {...register('autoPrintInvoice')}
-                    className="h-4 w-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-                  />
-                  <span className={`text-sm ${theme?.text?.primary || 'text-gray-700'}`}>
-                    Automatically print invoice after sale
-                  </span>
-                </label>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="flex items-center space-x-3 cursor-pointer">
+                <div className="flex items-center space-x-3">
                   <input
                     type="checkbox"
                     {...register('emailInvoice')}
+                    id="emailInvoice"
                     className="h-4 w-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
                   />
-                  <span className={`text-sm ${theme?.text?.primary || 'text-gray-700'}`}>
+                  <label htmlFor="emailInvoice" className={`text-sm ${theme.text.primary}`}>
                     Email invoice to customer (if email provided)
-                  </span>
-                </label>
+                  </label>
+                </div>
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* Backup & Restore */}
+        {/* Backup Settings */}
         {activeTab === 'backup' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="space-y-4"
           >
-            <div className={`${theme?.bg?.card || 'bg-white'} rounded-xl shadow-card p-6`}>
-              <h3 className={`text-lg font-heading font-semibold ${theme?.text?.primary || 'text-gray-900'} mb-4`}>
+            <div className={`${theme.bg.card} rounded-xl shadow-card p-6`}>
+              <h3 className={`text-lg font-heading font-semibold ${theme.text.primary} mb-4`}>
                 Backup Database
               </h3>
-              <p className={`text-sm ${theme?.text?.secondary || 'text-gray-600'} mb-4`}>
+              <p className={`text-sm ${theme.text.secondary} mb-4`}>
                 Create a backup of your entire database including all products, sales, customers, and settings.
               </p>
               <button
@@ -551,42 +510,15 @@ const StoreSettings = () => {
               </button>
             </div>
 
-            <div className={`${theme?.bg?.card || 'bg-white'} rounded-xl shadow-card p-6`}>
-              <h3 className={`text-lg font-heading font-semibold ${theme?.text?.primary || 'text-gray-900'} mb-4`}>
-                Restore Database
-              </h3>
-              <p className={`text-sm ${theme?.text?.secondary || 'text-gray-600'} mb-4`}>
-                Restore your database from a previous backup file.
-              </p>
-              <div className="flex items-center space-x-4">
-                <input
-                  type="file"
-                  accept=".zip,.sql,.json"
-                  className="flex-1 input-field"
-                  onChange={(e) => {
-                    // Handle file selection
-                    console.log('File selected:', e.target.files[0])
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn-secondary"
-                >
-                  <ArrowPathIcon className="h-5 w-5 mr-2" />
-                  Restore
-                </button>
-              </div>
-            </div>
-
-            <div className={`${theme?.bg?.card || 'bg-white'} rounded-xl shadow-card p-6`}>
-              <h3 className={`text-lg font-heading font-semibold ${theme?.text?.primary || 'text-gray-900'} mb-4`}>
+            <div className={`${theme.bg.card} rounded-xl shadow-card p-6`}>
+              <h3 className={`text-lg font-heading font-semibold ${theme.text.primary} mb-4`}>
                 Auto Backup Settings
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${theme?.text?.primary || 'text-gray-900'}`}>Automatic Backups</p>
-                    <p className={`text-xs ${theme?.text?.secondary || 'text-gray-600'}`}>Schedule regular database backups</p>
+                    <p className={`text-sm font-medium ${theme.text.primary}`}>Automatic Backups</p>
+                    <p className={`text-xs ${theme.text.secondary}`}>Schedule regular database backups</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -599,7 +531,7 @@ const StoreSettings = () => {
                 </div>
 
                 <div>
-                  <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                  <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                     Backup Frequency
                   </label>
                   <select
@@ -613,7 +545,7 @@ const StoreSettings = () => {
                 </div>
 
                 <div>
-                  <label className={`block text-sm font-medium ${theme?.text?.primary || 'text-gray-700'} mb-2`}>
+                  <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>
                     Backup Time
                   </label>
                   <input
@@ -627,7 +559,7 @@ const StoreSettings = () => {
           </motion.div>
         )}
 
-        {/* Submit Button (only for non-backup tabs) */}
+        {/* Submit Button */}
         {activeTab !== 'backup' && (
           <div className="flex justify-end">
             <button
