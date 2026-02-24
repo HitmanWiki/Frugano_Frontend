@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, forwardRef } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import { 
   Bars3Icon, 
@@ -14,6 +14,22 @@ import { useTheme } from '../../contexts/ThemeContext'
 import ThemeToggle from './ThemeToggle'
 import Logo from './Logo'
 import { useNavigate } from 'react-router-dom'
+
+// Create a custom button component that properly forwards refs
+const MenuItemButton = forwardRef(({ children, onClick, className, icon: Icon }, ref) => {
+  return (
+    <button
+      ref={ref}
+      onClick={onClick}
+      className={className}
+    >
+      {Icon && <Icon className="mr-3 h-5 w-5 text-gray-400" aria-hidden="true" />}
+      {children}
+    </button>
+  )
+})
+
+MenuItemButton.displayName = 'MenuItemButton'
 
 const Header = ({ toggleSidebar }) => {
   const { user, logout } = useAuth()
@@ -95,29 +111,29 @@ const Header = ({ toggleSidebar }) => {
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <button
+                        <MenuItemButton
                           onClick={() => navigate('/settings/profile')}
                           className={`${
                             active ? theme.bg.hover : ''
                           } flex items-center w-full text-left px-4 py-2 text-sm ${theme.text.primary}`}
+                          icon={UserIcon}
                         >
-                          <UserIcon className="mr-3 h-5 w-5 text-gray-400" />
                           Your Profile
-                        </button>
+                        </MenuItemButton>
                       )}
                     </Menu.Item>
                     
                     <Menu.Item>
                       {({ active }) => (
-                        <button
+                        <MenuItemButton
                           onClick={() => navigate('/settings')}
                           className={`${
                             active ? theme.bg.hover : ''
                           } flex items-center w-full text-left px-4 py-2 text-sm ${theme.text.primary}`}
+                          icon={Cog6ToothIcon}
                         >
-                          <Cog6ToothIcon className="mr-3 h-5 w-5 text-gray-400" />
                           Settings
-                        </button>
+                        </MenuItemButton>
                       )}
                     </Menu.Item>
                   </div>
@@ -126,15 +142,15 @@ const Header = ({ toggleSidebar }) => {
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <button
+                        <MenuItemButton
                           onClick={logout}
                           className={`${
                             active ? 'bg-red-50 dark:bg-red-900/20' : ''
                           } flex items-center w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400`}
+                          icon={ArrowRightOnRectangleIcon}
                         >
-                          <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5 text-red-400" />
                           Sign out
-                        </button>
+                        </MenuItemButton>
                       )}
                     </Menu.Item>
                   </div>
