@@ -1,4 +1,4 @@
-import { Fragment, forwardRef } from 'react'
+import { Fragment } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import { 
   Bars3Icon, 
@@ -15,27 +15,44 @@ import ThemeToggle from './ThemeToggle'
 import Logo from './Logo'
 import { useNavigate } from 'react-router-dom'
 
-// Create a custom button component that properly forwards refs
-const MenuItemButton = forwardRef(({ children, onClick, className, icon: Icon }, ref) => {
-  return (
-    <button
-      ref={ref}
-      onClick={onClick}
-      className={className}
-    >
-      {Icon && <Icon className="mr-3 h-5 w-5 text-gray-400" aria-hidden="true" />}
-      {children}
-    </button>
-  )
-})
-
-MenuItemButton.displayName = 'MenuItemButton'
-
 const Header = ({ toggleSidebar }) => {
   const { user, logout } = useAuth()
   const { online } = useSocket()
   const theme = useTheme()
   const navigate = useNavigate()
+
+  // Simple menu item component without forwardRef (let Headless UI handle it)
+  const MenuItem = ({ onClick, children, icon: Icon }) => (
+    <Menu.Item>
+      {({ active }) => (
+        <button
+          onClick={onClick}
+          className={`${
+            active ? theme.bg.hover : ''
+          } flex items-center w-full text-left px-4 py-2 text-sm ${theme.text.primary}`}
+        >
+          {Icon && <Icon className="mr-3 h-5 w-5 text-gray-400" aria-hidden="true" />}
+          {children}
+        </button>
+      )}
+    </Menu.Item>
+  )
+
+  const LogoutItem = ({ onClick, children, icon: Icon }) => (
+    <Menu.Item>
+      {({ active }) => (
+        <button
+          onClick={onClick}
+          className={`${
+            active ? 'bg-red-50 dark:bg-red-900/20' : ''
+          } flex items-center w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400`}
+        >
+          {Icon && <Icon className="mr-3 h-5 w-5 text-red-400" aria-hidden="true" />}
+          {children}
+        </button>
+      )}
+    </Menu.Item>
+  )
 
   return (
     <header className={`${theme.header} shadow sticky top-0 z-30 transition-colors duration-200 border-b ${theme.border.primary}`}>
@@ -109,50 +126,20 @@ const Header = ({ toggleSidebar }) => {
 
                   {/* Menu Items */}
                   <div className="py-1">
-                    <Menu.Item>
-                      {({ active }) => (
-                        <MenuItemButton
-                          onClick={() => navigate('/settings/profile')}
-                          className={`${
-                            active ? theme.bg.hover : ''
-                          } flex items-center w-full text-left px-4 py-2 text-sm ${theme.text.primary}`}
-                          icon={UserIcon}
-                        >
-                          Your Profile
-                        </MenuItemButton>
-                      )}
-                    </Menu.Item>
+                    <MenuItem onClick={() => navigate('/settings/profile')} icon={UserIcon}>
+                      Your Profile
+                    </MenuItem>
                     
-                    <Menu.Item>
-                      {({ active }) => (
-                        <MenuItemButton
-                          onClick={() => navigate('/settings')}
-                          className={`${
-                            active ? theme.bg.hover : ''
-                          } flex items-center w-full text-left px-4 py-2 text-sm ${theme.text.primary}`}
-                          icon={Cog6ToothIcon}
-                        >
-                          Settings
-                        </MenuItemButton>
-                      )}
-                    </Menu.Item>
+                    <MenuItem onClick={() => navigate('/settings')} icon={Cog6ToothIcon}>
+                      Settings
+                    </MenuItem>
                   </div>
 
                   {/* Logout */}
                   <div className="py-1">
-                    <Menu.Item>
-                      {({ active }) => (
-                        <MenuItemButton
-                          onClick={logout}
-                          className={`${
-                            active ? 'bg-red-50 dark:bg-red-900/20' : ''
-                          } flex items-center w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400`}
-                          icon={ArrowRightOnRectangleIcon}
-                        >
-                          Sign out
-                        </MenuItemButton>
-                      )}
-                    </Menu.Item>
+                    <LogoutItem onClick={logout} icon={ArrowRightOnRectangleIcon}>
+                      Sign out
+                    </LogoutItem>
                   </div>
                 </Menu.Items>
               </Transition>
