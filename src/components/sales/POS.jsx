@@ -31,23 +31,41 @@ const POS = () => {
   const [upiAmount, setUpiAmount] = useState(0)
   const [discount, setDiscount] = useState(0)
   const [notes, setNotes] = useState('')
-  const [taxRate, setTaxRate] = useState(5) // Default 5%
+  const [taxRate, setTaxRate] = useState(5) // Default
   const theme = useTheme()
   const queryClient = useQueryClient()
 
-  // Fetch store settings to get tax rate
-  const { data: settings } = useQuery({
+  // Fetch store settings first - with high priority
+  const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ['store-settings'],
-    queryFn: () => api.get('/settings/store').then(res => res.data.data),
-    onSuccess: (data) => {
-      if (data && data.taxRate !== undefined) {
-        setTaxRate(data.taxRate)
-        console.log('📊 Tax rate loaded:', data.taxRate)
+    queryFn: async () => {
+      try {
+        console.log('🏪 Fetching store settings...')
+        const response = await api.get('/settings/store')
+        console.log('✅ Settings API response:', response.data)
+        return response.data.data
+      } catch (error) {
+        console.error('❌ Failed to fetch settings:', error)
+        return { taxRate: 5 }
       }
-    }
+    },
+    staleTime: 0,
+    cacheTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   })
 
-  const { data: products, isLoading } = useQuery({
+  // Update tax rate when settings change
+  useEffect(() => {
+    if (settings && settings.taxRate !== undefined) {
+      const newTaxRate = Number(settings.taxRate)
+      console.log('📊 Updating tax rate from settings:', newTaxRate)
+      setTaxRate(newTaxRate)
+    }
+  }, [settings])
+
+  // Fetch products
+  const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['pos-products', search],
     queryFn: () => api.get('/products', { 
       params: { 
@@ -76,7 +94,6 @@ const POS = () => {
       setNotes('')
       setShowPayment(false)
       
-      // Ask if user wants to print
       if (window.confirm('Print receipt?')) {
         window.open(`/api/print/invoice/${saleId}`, '_blank')
       }
@@ -150,9 +167,15 @@ const POS = () => {
   }
 
   const calculateTax = () => {
-    // Use dynamic tax rate from settings
-    const taxAmount = calculateSubtotal() * (taxRate / 100)
-    console.log('🧮 Tax calculation:', { subtotal: calculateSubtotal(), taxRate, taxAmount })
+    const subtotal = calculateSubtotal()
+    // Use the current taxRate state
+    const taxAmount = subtotal * (taxRate / 100)
+    console.log('🧮 Tax calculation:', { 
+      subtotal, 
+      taxRate, 
+      taxAmount,
+      taxRateSource: settings ? 'from settings' : 'default'
+    })
     return taxAmount
   }
 
@@ -197,11 +220,8 @@ const POS = () => {
       totalAmount: calculateTotal()
     }
 
-    console.log('💾 Sale data with tax:', { 
-      taxRate, 
-      taxAmount: calculateTax(), 
-      total: calculateTotal() 
-    })
+    console.log('💾 Sale data:', saleData)
+    console.log('💾 Tax rate used:', taxRate)
 
     createSaleMutation.mutate(saleData)
   }
@@ -216,7 +236,7 @@ const POS = () => {
     }
   }
 
-  if (isLoading) return <Loader />
+  if (productsLoading || settingsLoading) return <Loader />
 
   return (
     <motion.div
@@ -231,9 +251,11 @@ const POS = () => {
             Products
           </h2>
           <div className="flex items-center space-x-4">
-            <span className={`text-sm ${theme.text.secondary}`}>
-              Tax Rate: {taxRate}%
-            </span>
+            <div className={`text-sm px-3 py-1 rounded-full ${
+              taxRate === 0 ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+            }`}>
+              Tax: {taxRate}%
+            </div>
             <span className={`text-sm ${theme.text.secondary}`}>
               {cart.length} items
             </span>
@@ -360,6 +382,20 @@ const POS = () => {
               </p>
             </div>
           )}
+        </div>
+
+        {/* Tax Rate Display */}
+        <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div className="flex justify-between items-center">
+            <span className={`text-sm font-medium ${theme.text.secondary}`}>
+              Tax Rate:
+            </span>
+            <span className={`text-lg font-bold ${
+              taxRate === 0 ? 'text-green-600' : 'text-primary-600'
+            }`}>
+              {taxRate}%
+            </span>
+          </div>
         </div>
 
         {/* Discount Input */}
