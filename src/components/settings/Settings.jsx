@@ -26,7 +26,8 @@ const Settings = () => {
           description: 'Manage your personal information',
           icon: UserCircleIcon,
           path: '/settings/profile',
-          color: 'bg-blue-500'
+          color: 'bg-blue-500',
+          disabled: false
         },
         {
           name: 'Notifications',
@@ -60,14 +61,16 @@ const Settings = () => {
             description: 'Manage system users and permissions',
             icon: UsersIcon,
             path: '/settings/users',
-            color: 'bg-green-500'
+            color: 'bg-green-500',
+            disabled: false
           },
           {
             name: 'Store Settings',
             description: 'Configure store information',
             icon: BuildingStorefrontIcon,
             path: '/settings/store',
-            color: 'bg-orange-500'
+            color: 'bg-orange-500',
+            disabled: false
           },
           {
             name: 'Roles & Permissions',
@@ -81,6 +84,43 @@ const Settings = () => {
       }
     ] : [])
   ]
+
+  // Simple card component without complex refs
+  const SettingCard = ({ item }) => {
+    const handleClick = () => {
+      if (!item.disabled) {
+        navigate(item.path)
+      }
+    }
+
+    return (
+      <div
+        onClick={handleClick}
+        className={`${theme.bg.card} rounded-xl shadow-card p-6 hover:shadow-hover transition-all ${
+          item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.02]'
+        }`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-start space-x-4">
+            <div className={`p-3 rounded-xl ${item.color} bg-opacity-10`}>
+              <item.icon className={`h-6 w-6 ${item.color.replace('bg-', 'text-')}`} />
+            </div>
+            <div>
+              <h3 className={`text-base font-heading font-semibold ${theme.text.primary}`}>
+                {item.name}
+              </h3>
+              <p className={`text-sm ${theme.text.secondary} mt-1`}>
+                {item.description}
+              </p>
+            </div>
+          </div>
+          {!item.disabled && (
+            <ChevronRightIcon className={`h-5 w-5 ${theme.text.secondary}`} />
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <motion.div
@@ -98,31 +138,7 @@ const Settings = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {section.items.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => !item.disabled && navigate(item.path)}
-                  disabled={item.disabled}
-                  className={`${theme.bg.card} rounded-xl shadow-card p-6 hover:shadow-hover transition-all text-left ${
-                    item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-102'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <div className={`p-3 rounded-xl ${item.color} bg-opacity-10`}>
-                        <item.icon className={`h-6 w-6 ${item.color.replace('bg-', 'text-')}`} />
-                      </div>
-                      <div>
-                        <h3 className={`text-base font-heading font-semibold ${theme.text.primary}`}>
-                          {item.name}
-                        </h3>
-                        <p className={`text-sm ${theme.text.secondary} mt-1`}>
-                          {item.description}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRightIcon className={`h-5 w-5 ${theme.text.secondary}`} />
-                  </div>
-                </button>
+                <SettingCard key={item.name} item={item} />
               ))}
             </div>
           </div>
