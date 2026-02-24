@@ -16,15 +16,12 @@ const CategoryList = lazy(() => import('./components/categories/CategoryList'))
 const POS = lazy(() => import('./components/sales/POS'))
 const SaleList = lazy(() => import('./components/sales/SaleList'))
 const SaleDetails = lazy(() => import('./components/sales/SaleDetails'))
-const Invoice = lazy(() => import('./components/sales/Invoice'))
 const PurchaseList = lazy(() => import('./components/purchases/PurchaseList'))
 const PurchaseForm = lazy(() => import('./components/purchases/PurchaseForm'))
-const PurchaseDetails = lazy(() => import('./components/purchases/PurchaseDetails'))
 const SupplierList = lazy(() => import('./components/suppliers/SupplierList'))
 const SupplierForm = lazy(() => import('./components/suppliers/SupplierForm'))
 const InventoryStatus = lazy(() => import('./components/inventory/InventoryStatus'))
 const StockAlerts = lazy(() => import('./components/inventory/StockAlerts'))
-const InventoryMovements = lazy(() => import('./components/inventory/InventoryMovements'))
 const CustomerList = lazy(() => import('./components/customers/CustomerList'))
 const CustomerForm = lazy(() => import('./components/customers/CustomerForm'))
 const CampaignList = lazy(() => import('./components/campaigns/CampaignList'))
@@ -34,6 +31,8 @@ const PrinterConfig = lazy(() => import('./components/hardware/PrinterConfig'))
 const WeighingScale = lazy(() => import('./components/hardware/WeighingScale'))
 const UserManagement = lazy(() => import('./components/settings/UserManagement'))
 const StoreSettings = lazy(() => import('./components/settings/StoreSettings'))
+const Profile = lazy(() => import('./components/settings/Profile')) // Add this import
+const Settings = lazy(() => import('./components/settings/Settings')) // Add this for settings overview
 
 function App() {
   return (
@@ -71,21 +70,18 @@ function App() {
               <Route index element={<SaleList />} />
               <Route path="pos" element={<POS />} />
               <Route path=":id" element={<SaleDetails />} />
-              <Route path="invoice/:id" element={<Invoice />} />
             </Route>
             
             {/* Purchases */}
             <Route path="purchases">
               <Route index element={<PurchaseList />} />
               <Route path="new" element={<PurchaseForm />} />
-              <Route path=":id" element={<PurchaseDetails />} />
             </Route>
             
             {/* Suppliers */}
             <Route path="suppliers">
               <Route index element={<SupplierList />} />
               <Route path="new" element={<SupplierForm />} />
-              <Route path=":id" element={<SupplierForm />} />
               <Route path=":id/edit" element={<SupplierForm />} />
             </Route>
             
@@ -93,18 +89,16 @@ function App() {
             <Route path="inventory">
               <Route index element={<InventoryStatus />} />
               <Route path="alerts" element={<StockAlerts />} />
-              <Route path="movements" element={<InventoryMovements />} />
             </Route>
             
             {/* Customers */}
             <Route path="customers">
               <Route index element={<CustomerList />} />
               <Route path="new" element={<CustomerForm />} />
-              <Route path=":id" element={<CustomerForm />} />
               <Route path=":id/edit" element={<CustomerForm />} />
             </Route>
             
-            {/* Campaigns - FIXED ROUTES */}
+            {/* Campaigns */}
             <Route path="campaigns">
               <Route index element={<CampaignList />} />
               <Route path="new" element={<CampaignForm />} />
@@ -123,8 +117,10 @@ function App() {
               <Route path="scale" element={<WeighingScale />} />
             </Route>
             
-            {/* Settings */}
+            {/* Settings Routes - FIXED */}
             <Route path="settings">
+              <Route index element={<Settings />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="store" element={<StoreSettings />} />
             </Route>
