@@ -6,7 +6,6 @@ import {
   ArrowLeftIcon,
   PencilIcon,
   TrashIcon,
-  CubeIcon,
   CurrencyRupeeIcon,
   ArchiveBoxIcon,
   TagIcon,
