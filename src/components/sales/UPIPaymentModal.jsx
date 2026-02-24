@@ -41,27 +41,20 @@ const UPIPaymentModal = ({ isOpen, onClose, sale, amount, orderId }) => {
   }, [paymentStatus, timeLeft])
 
   const generateQRCode = async () => {
-    setLoading(true)
-    try {
-      let response
-      if (sale) {
-        // Generate QR for existing sale
-        response = await api.post(`/upi/generate/${sale.id}`)
-      } else {
-        // Generate QR for custom amount
-        response = await api.post('/upi/generate-amount', {
-          amount,
-          orderId: orderId || `POS${Date.now()}`
-        })
-      }
-      setQrData(response.data.data)
-    } catch (error) {
-      toast.error('Failed to generate QR code')
-      onClose()
-    } finally {
-      setLoading(false)
-    }
+  setLoading(true);
+  try {
+    const response = await api.post('/upi/generate-amount', {
+      amount,
+      orderId: orderId || `ORDER${Date.now()}`
+    });
+    setQrData(response.data.data);
+  } catch (error) {
+    console.error('QR generation error:', error);
+    toast.error('Failed to generate QR');
+  } finally {
+    setLoading(false);
   }
+};
 
   const handlePrint = () => {
     if (!qrData) return
