@@ -21,6 +21,7 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import Loader from '../common/Loader'
 import { useTheme } from '../../contexts/ThemeContext'
+import PrintButton from '../common/PrintButton'
 
 const SaleDetails = () => {
   const { id } = useParams()
@@ -28,6 +29,7 @@ const SaleDetails = () => {
   const theme = useTheme()
   const [showVoidConfirm, setShowVoidConfirm] = useState(false)
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
+  const [printing, setPrinting] = useState(false)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -53,8 +55,24 @@ const SaleDetails = () => {
     voidMutation.mutate(reason)
   }
 
-  const handlePrintInvoice = () => {
-    window.open(`/sales/invoice/${id}`, '_blank')
+  const handlePrintInvoice = async () => {
+    setPrinting(true)
+    try {
+      // Try to print directly via thermal printer
+      const response = await api.post(`/print/invoice/${id}`).catch(() => {
+        // Fallback to PDF download
+        window.open(`/api/sales/${id}/print`, '_blank')
+      })
+      
+      if (response?.data?.success) {
+        toast.success('Invoice sent to printer')
+      }
+    } catch (error) {
+      // Fallback to PDF
+      window.open(`/api/sales/${id}/print`, '_blank')
+    } finally {
+      setPrinting(false)
+    }
   }
 
   const handleWhatsApp = async () => {
@@ -74,7 +92,6 @@ const SaleDetails = () => {
       
       if (result.mock) {
         toast.success(`📱 WhatsApp bill sent (Demo) from ${whatsappService.getBusinessNumber()}`)
-        // Show the message in console for demo
         console.log('📱 WhatsApp message would be sent from:', whatsappService.getBusinessNumber())
         console.log('📱 To:', sale.customerPhone)
       } else {
@@ -135,6 +152,17 @@ const SaleDetails = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          {/* Print Button */}
+          <button
+            onClick={handlePrintInvoice}
+            disabled={printing}
+            className="btn-secondary inline-flex items-center"
+            title="Print Invoice"
+          >
+            <PrinterIcon className="h-4 w-4 mr-2" />
+            {printing ? 'Printing...' : 'Print'}
+          </button>
+
           {/* WhatsApp Button */}
           {sale.customerPhone && sale.paymentStatus !== 'CANCELLED' && (
             <button
@@ -151,28 +179,20 @@ const SaleDetails = () => {
               ) : (
                 <>
                   <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />
-                  WhatsApp Bill
+                  WhatsApp
                 </>
               )}
             </button>
           )}
           
-          <button
-            onClick={handlePrintInvoice}
-            className="btn-secondary inline-flex items-center"
-            title="Print Invoice"
-          >
-            <PrinterIcon className="h-4 w-4 mr-2" />
-            Print
-          </button>
-          
+          {/* Void Button */}
           {sale.paymentStatus !== 'CANCELLED' && (
             <button
               onClick={() => setShowVoidConfirm(true)}
               className="btn-danger inline-flex items-center"
             >
               <XCircleIcon className="h-4 w-4 mr-2" />
-              Void Sale
+              Void
             </button>
           )}
         </div>
