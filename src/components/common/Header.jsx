@@ -6,17 +6,20 @@ import {
   UserCircleIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
 import { useSocket } from '../../contexts/SocketContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import ThemeToggle from './ThemeToggle'
 import Logo from './Logo'
+import { useNavigate } from 'react-router-dom'
 
 const Header = ({ toggleSidebar }) => {
   const { user, logout } = useAuth()
   const { online } = useSocket()
   const theme = useTheme()
+  const navigate = useNavigate()
 
   return (
     <header className={`${theme.header} shadow sticky top-0 z-30 transition-colors duration-200 border-b ${theme.border.primary}`}>
@@ -32,7 +35,7 @@ const Header = ({ toggleSidebar }) => {
               <Bars3Icon className="h-6 w-6" />
             </button>
             
-            <div className="ml-4 lg:ml-0">
+            <div className="ml-4 lg:ml-0 cursor-pointer" onClick={() => navigate('/dashboard')}>
               <Logo size="sm" />
             </div>
           </div>
@@ -81,45 +84,56 @@ const Header = ({ toggleSidebar }) => {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className={`absolute right-0 mt-2 w-48 origin-top-right ${theme.bg.card} rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`}>
+                <Menu.Items className={`absolute right-0 mt-2 w-56 origin-top-right ${theme.bg.card} rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100 dark:divide-gray-700`}>
+                  {/* User Info Header */}
+                  <div className="px-4 py-3">
+                    <p className={`text-sm font-medium ${theme.text.primary}`}>{user?.name}</p>
+                    <p className={`text-xs ${theme.text.secondary} truncate`}>{user?.email}</p>
+                  </div>
+
+                  {/* Menu Items */}
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="/settings/profile"
+                        <button
+                          onClick={() => navigate('/settings/profile')}
                           className={`${
                             active ? theme.bg.hover : ''
-                          } flex items-center px-4 py-2 text-sm ${theme.text.primary}`}
+                          } flex items-center w-full text-left px-4 py-2 text-sm ${theme.text.primary}`}
                         >
-                          <UserCircleIcon className="mr-3 h-5 w-5 text-gray-400" />
-                          Profile
-                        </a>
+                          <UserIcon className="mr-3 h-5 w-5 text-gray-400" />
+                          Your Profile
+                        </button>
                       )}
                     </Menu.Item>
+                    
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="/settings"
+                        <button
+                          onClick={() => navigate('/settings')}
                           className={`${
                             active ? theme.bg.hover : ''
-                          } flex items-center px-4 py-2 text-sm ${theme.text.primary}`}
+                          } flex items-center w-full text-left px-4 py-2 text-sm ${theme.text.primary}`}
                         >
                           <Cog6ToothIcon className="mr-3 h-5 w-5 text-gray-400" />
                           Settings
-                        </a>
+                        </button>
                       )}
                     </Menu.Item>
-                    <div className={`border-t ${theme.border.primary}`}></div>
+                  </div>
+
+                  {/* Logout */}
+                  <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
                         <button
                           onClick={logout}
                           className={`${
-                            active ? theme.bg.hover : ''
+                            active ? 'bg-red-50 dark:bg-red-900/20' : ''
                           } flex items-center w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400`}
                         >
                           <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5 text-red-400" />
-                          Logout
+                          Sign out
                         </button>
                       )}
                     </Menu.Item>
