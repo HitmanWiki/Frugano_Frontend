@@ -13,6 +13,7 @@ import {
   CalendarIcon,
   ShoppingBagIcon,
   PhoneIcon,
+  QrCodeIcon,
 } from '@heroicons/react/24/outline'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid'
 import api from '../../services/api'
@@ -22,6 +23,7 @@ import toast from 'react-hot-toast'
 import Loader from '../common/Loader'
 import { useTheme } from '../../contexts/ThemeContext'
 import PrintButton from '../common/PrintButton'
+import UPIPaymentModal from './UPIPaymentModal'
 
 const SaleDetails = () => {
   const { id } = useParams()
@@ -30,6 +32,7 @@ const SaleDetails = () => {
   const [showVoidConfirm, setShowVoidConfirm] = useState(false)
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [printing, setPrinting] = useState(false)
+  const [showUPIModal, setShowUPIModal] = useState(false)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -104,6 +107,19 @@ const SaleDetails = () => {
     }
   }
 
+  const handleUPIPayment = () => {
+    setShowUPIModal(true)
+  }
+
+  const handleUPIPaymentComplete = (paid) => {
+    setShowUPIModal(false)
+    if (paid) {
+      // Refresh sale data
+      queryClient.invalidateQueries(['sales', id])
+      toast.success('Payment recorded successfully')
+    }
+  }
+
   if (isLoading) return <Loader />
 
   const sale = data?.data
@@ -152,6 +168,18 @@ const SaleDetails = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          {/* UPI QR Button - Show for pending payments */}
+          {sale.paymentStatus === 'PENDING' && (
+            <button
+              onClick={handleUPIPayment}
+              className="btn-secondary inline-flex items-center"
+              title="Generate UPI QR Code"
+            >
+              <QrCodeIcon className="h-4 w-4 mr-2" />
+              UPI QR
+            </button>
+          )}
+
           {/* Print Button */}
           <button
             onClick={handlePrintInvoice}
@@ -365,6 +393,15 @@ const SaleDetails = () => {
           </div>
         </div>
       )}
+
+      {/* UPI QR Modal */}
+      <UPIPaymentModal
+        isOpen={showUPIModal}
+        onClose={handleUPIPaymentComplete}
+        sale={sale}
+        amount={sale.totalAmount}
+        orderId={sale.invoiceNo}
+      />
 
       {/* Void Confirmation Modal */}
       {showVoidConfirm && (
