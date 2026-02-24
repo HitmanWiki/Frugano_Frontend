@@ -31,8 +31,21 @@ const POS = () => {
   const [upiAmount, setUpiAmount] = useState(0)
   const [discount, setDiscount] = useState(0)
   const [notes, setNotes] = useState('')
+  const [taxRate, setTaxRate] = useState(5) // Default 5%
   const theme = useTheme()
   const queryClient = useQueryClient()
+
+  // Fetch store settings to get tax rate
+  const { data: settings } = useQuery({
+    queryKey: ['store-settings'],
+    queryFn: () => api.get('/settings/store').then(res => res.data.data),
+    onSuccess: (data) => {
+      if (data && data.taxRate !== undefined) {
+        setTaxRate(data.taxRate)
+        console.log('📊 Tax rate loaded:', data.taxRate)
+      }
+    }
+  })
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['pos-products', search],
@@ -137,7 +150,10 @@ const POS = () => {
   }
 
   const calculateTax = () => {
-    return calculateSubtotal() * 0.05 // Assuming 5% tax
+    // Use dynamic tax rate from settings
+    const taxAmount = calculateSubtotal() * (taxRate / 100)
+    console.log('🧮 Tax calculation:', { subtotal: calculateSubtotal(), taxRate, taxAmount })
+    return taxAmount
   }
 
   const calculateTotal = () => {
@@ -160,7 +176,6 @@ const POS = () => {
   const handleUPIPaymentComplete = (paid) => {
     setShowUPIModal(false)
     if (paid) {
-      // Proceed with sale after UPI payment
       handlePayment()
     }
   }
@@ -182,10 +197,15 @@ const POS = () => {
       totalAmount: calculateTotal()
     }
 
+    console.log('💾 Sale data with tax:', { 
+      taxRate, 
+      taxAmount: calculateTax(), 
+      total: calculateTotal() 
+    })
+
     createSaleMutation.mutate(saleData)
   }
 
-  // Quick product search with barcode scanner simulation
   const handleBarcodeScan = (barcode) => {
     const product = products?.data?.find(p => p.barcode === barcode)
     if (product) {
@@ -210,9 +230,14 @@ const POS = () => {
           <h2 className={`text-lg font-heading font-semibold ${theme.text.primary}`}>
             Products
           </h2>
-          <span className={`text-sm ${theme.text.secondary}`}>
-            {cart.length} items in cart
-          </span>
+          <div className="flex items-center space-x-4">
+            <span className={`text-sm ${theme.text.secondary}`}>
+              Tax Rate: {taxRate}%
+            </span>
+            <span className={`text-sm ${theme.text.secondary}`}>
+              {cart.length} items
+            </span>
+          </div>
         </div>
 
         {/* Search and Barcode */}
@@ -374,7 +399,7 @@ const POS = () => {
             <span className={`font-medium ${theme.text.primary}`}>₹{calculateSubtotal().toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className={theme.text.secondary}>Tax (5%):</span>
+            <span className={theme.text.secondary}>Tax ({taxRate}%):</span>
             <span className={`font-medium ${theme.text.primary}`}>₹{calculateTax().toFixed(2)}</span>
           </div>
           {discount > 0 && (
@@ -439,6 +464,7 @@ const POS = () => {
           cart={cart}
           subtotal={calculateSubtotal()}
           tax={calculateTax()}
+          taxRate={taxRate}
           discount={discount}
           total={calculateTotal()}
           paymentMethod={paymentMethod}
@@ -469,6 +495,7 @@ const PaymentModal = ({
   cart,
   subtotal,
   tax,
+  taxRate,
   discount,
   total,
   paymentMethod,
@@ -542,7 +569,7 @@ const PaymentModal = ({
                   <span className={theme.text.primary}>₹{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={theme.text.secondary}>Tax:</span>
+                  <span className={theme.text.secondary}>Tax ({taxRate}%):</span>
                   <span className={theme.text.primary}>₹{tax.toFixed(2)}</span>
                 </div>
                 {discount > 0 && (
