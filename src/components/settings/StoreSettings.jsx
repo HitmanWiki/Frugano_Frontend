@@ -76,35 +76,54 @@ const StoreSettings = () => {
   })
 
   const onSubmit = async (data) => {
-    setLoading(true)
-    try {
-      // Format data for API
-      const formattedData = {
-        ...data,
-        taxRate: parseFloat(data.taxRate) || 0,
-        deliveryFee: parseFloat(data.deliveryFee) || 0,
-        freeDeliveryMin: parseFloat(data.freeDeliveryMin) || 0,
-        loyaltyPointsRate: parseInt(data.loyaltyPointsRate) || 1,
-        invoiceStartNumber: parseInt(data.invoiceStartNumber) || 1001,
-        autoPrintInvoice: Boolean(data.autoPrintInvoice),
-        emailInvoice: Boolean(data.emailInvoice),
-        autoBackup: Boolean(data.autoBackup),
-      }
+  setLoading(true)
+  try {
+    // Log the data being sent
+    console.log('📤 Submitting settings data:', data)
+    console.log('📤 Tax rate value:', data.taxRate)
+    console.log('📤 Tax rate type:', typeof data.taxRate)
 
-      await api.put('/settings/store', formattedData)
-      toast.success('Store settings updated successfully')
-    } catch (error) {
-      if (error.response?.status === 400) {
-        toast.error('Validation error: ' + (error.response.data?.error || 'Invalid data'))
-      } else if (error.response?.status === 404) {
-        toast.success('Settings saved locally (demo mode)')
-      } else {
-        toast.error(error.response?.data?.error || 'Failed to update settings')
-      }
-    } finally {
-      setLoading(false)
+    // Format data for API - ensure numbers are numbers
+    const formattedData = {
+      ...data,
+      taxRate: data.taxRate === '' ? 0 : parseFloat(data.taxRate) || 0,
+      deliveryFee: parseFloat(data.deliveryFee) || 0,
+      freeDeliveryMin: parseFloat(data.freeDeliveryMin) || 0,
+      loyaltyPointsRate: parseInt(data.loyaltyPointsRate) || 1,
+      invoiceStartNumber: parseInt(data.invoiceStartNumber) || 1001,
+      autoPrintInvoice: Boolean(data.autoPrintInvoice),
+      emailInvoice: Boolean(data.emailInvoice),
+      autoBackup: Boolean(data.autoBackup),
     }
+
+    console.log('📤 Formatted data being sent:', formattedData)
+    console.log('📤 Formatted tax rate:', formattedData.taxRate)
+
+    const response = await api.put('/settings/store', formattedData)
+    console.log('📥 Update response:', response.data)
+    
+    toast.success('Store settings updated successfully')
+    
+    // Force a refetch of settings
+    setTimeout(() => {
+      window.location.reload() // Simple way to ensure everything reloads
+    }, 1500)
+    
+  } catch (error) {
+    console.error('❌ Update error:', error)
+    console.error('❌ Error response:', error.response?.data)
+    
+    if (error.response?.status === 400) {
+      toast.error('Validation error: ' + (error.response.data?.error || 'Invalid data'))
+    } else if (error.response?.status === 404) {
+      toast.success('Settings saved locally (demo mode)')
+    } else {
+      toast.error(error.response?.data?.error || 'Failed to update settings')
+    }
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleBackup = async () => {
     try {
